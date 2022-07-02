@@ -166,16 +166,18 @@ std::variant<StackBuffer<TSize>, std::vector<std::byte>> TryTransform(
 
 /// Executes multiple byte butter into requested data type transformations in a loop to increase processing time.
 template<size_t TSize, ReturnMethod TReturnMethod, ExceptionHandling TExceptionHandling>
-void TryMultipleTransforms(
+int TryMultipleTransforms(
         const std::byte *buffer,
         size_t length
 )
 {
     // Do enough iterations to hide time needed for the actual measurement.
-    for( int i = 0; i < 10000; ++i ) {
+    const int scaling = 10000;
+    for( int i = 0; i < scaling; ++i ) {
         // Try to limit compiler optimizations.
         DoNotOptimize( TryTransform<TSize, TReturnMethod, TExceptionHandling>( buffer, length ));
     }
+    return scaling;
 }
 
 template<size_t TSize, ReturnMethod TReturnMethod, ExceptionHandling TExceptionHandling>
@@ -189,10 +191,10 @@ std::tuple<std::chrono::nanoseconds, bool> MeasureTransform(
     while( vecSamples.size() < 1000 ) {
         // Dp a single test.
         auto tpStart = std::chrono::high_resolution_clock::now();
-        TryMultipleTransforms<TSize, TReturnMethod, TExceptionHandling>( vecData.data(), vecData.size());
+        int scaling = TryMultipleTransforms<TSize, TReturnMethod, TExceptionHandling>( vecData.data(), vecData.size());
         auto tpEnd = std::chrono::high_resolution_clock::now();
         auto nanoseconds = std::chrono::duration_cast<std::chrono::nanoseconds>( tpEnd - tpStart );
-        vecSamples.push_back( nanoseconds );
+        vecSamples.push_back( nanoseconds / scaling );
     }
     std::sort( vecSamples.begin(), vecSamples.end());
 
